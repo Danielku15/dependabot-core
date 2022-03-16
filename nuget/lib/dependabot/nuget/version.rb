@@ -44,7 +44,7 @@ module Dependabot
         version_comparison = compare_prerelease_part(other)
         return version_comparison unless version_comparison.zero?
 
-        compare_build_info(other)
+        return 0
       end
 
       def compare_release(other)
@@ -100,24 +100,6 @@ module Dependabot
         return lhs.to_i <=> rhs.to_i if lhs.match?(/^\d+$/) && rhs.match?(/^\d+$/)
 
         lhs <=> rhs
-      end
-
-      def compare_build_info(other)
-        return build_info.nil? ? 0 : 1 unless other.is_a?(Nuget::Version)
-
-        # Build information comparison
-        lhsegments = build_info.to_s.split(".").map(&:downcase)
-        rhsegments = other.build_info.to_s.split(".").map(&:downcase)
-        limit = [lhsegments.count, rhsegments.count].min
-
-        lhs = ["1", *lhsegments.first(limit)].join(".")
-        rhs = ["1", *rhsegments.first(limit)].join(".")
-
-        local_comparison = Gem::Version.new(lhs) <=> Gem::Version.new(rhs)
-
-        return local_comparison unless local_comparison.zero?
-
-        lhsegments.count <=> rhsegments.count
       end
     end
   end

@@ -14,14 +14,19 @@ RSpec.describe Dependabot::Nuget::Version do
       let(:version_string) { "1.0.0" }
       it { is_expected.to eq(true) }
 
-      context "that includes build information" do
-        let(:version_string) { "1.0.0+abc.1" }
+      context "that includes build metadata" do
+        let(:version_string) { "1.0.0+build.1" }
         it { is_expected.to eq(true) }
       end
 
       context "that includes pre-release details" do
-        let(:version_string) { "1.0.0-beta+abc.1" }
+        let(:version_string) { "1.0.0-beta" }
         it { is_expected.to eq(true) }
+        
+        context "and build metadata" do
+          let(:version_string) { "1.0.0-beta+build.1" }
+          it { is_expected.to eq(true) }
+        end
       end
     end
 
@@ -38,11 +43,6 @@ RSpec.describe Dependabot::Nuget::Version do
     context "with an invalid version" do
       let(:version_string) { "bad" }
       it { is_expected.to eq(false) }
-
-      context "that includes build information" do
-        let(:version_string) { "1.0.0+abc 123" }
-        it { is_expected.to eq(false) }
-      end
     end
   end
 
@@ -54,9 +54,9 @@ RSpec.describe Dependabot::Nuget::Version do
       it { is_expected.to eq "1.0.0" }
     end
 
-    context "with build information" do
-      let(:version_string) { "1.0.0+gc.1" }
-      it { is_expected.to eq "1.0.0+gc.1" }
+    context "with build metadata" do
+      let(:version_string) { "1.0.0+build.1" }
+      it { is_expected.to eq "1.0.0+build.1" }
     end
 
     context "with a blank version" do
@@ -65,8 +65,13 @@ RSpec.describe Dependabot::Nuget::Version do
     end
 
     context "with pre-release details" do
-      let(:version_string) { "1.0.0-beta+abc.1" }
-      it { is_expected.to eq("1.0.0-beta+abc.1") }
+      let(:version_string) { "1.0.0-beta" }
+      it { is_expected.to eq("1.0.0-beta") }
+      
+      context "and build metadata" do
+        let(:version_string) { "1.0.0-beta+build.1" }
+        it { is_expected.to eq("1.0.0-beta+build.1") }
+      end
     end
   end
 
@@ -77,21 +82,32 @@ RSpec.describe Dependabot::Nuget::Version do
       context "that is lower" do
         let(:other_version) { Gem::Version.new("0.9.0") }
         it { is_expected.to eq(1) }
+        
+        context "but our version has build metadata" do
+          let(:version_string) { "1.0.0+build.1" }
+
+          it { is_expected.to eq(1) }
+        end        
       end
 
       context "that is equal" do
         let(:other_version) { Gem::Version.new("1.0.0") }
         it { is_expected.to eq(0) }
 
-        context "but our version has build information" do
-          let(:version_string) { "1.0.0+gc.1" }
-          it { is_expected.to eq(1) }
+        context "but our version has build metadata" do
+          let(:version_string) { "1.0.0+build.1" }
+          it { is_expected.to eq(0) }
         end
       end
 
       context "that is greater" do
         let(:other_version) { Gem::Version.new("1.1.0") }
         it { is_expected.to eq(-1) }
+        
+        context "but our version has build metadata" do
+          let(:version_string) { "1.0.0+build.1" }
+          it { is_expected.to eq(-1) }
+        end
       end
     end
 
@@ -99,6 +115,41 @@ RSpec.describe Dependabot::Nuget::Version do
       context "that is lower" do
         let(:other_version) { described_class.new("0.9.0") }
         it { is_expected.to eq(1) }
+        
+        context "but our version has build metadata" do
+          let(:version_string) { "1.0.0+build.1" }
+          it { is_expected.to eq(1) }
+        end
+
+        context "but the other version has build metadata" do
+          let(:other_version) { described_class.new("0.9.0+build.1") }
+          it { is_expected.to eq(1) }
+        end
+        
+        context "and both sides have build metadata" do
+          let(:other_version) { described_class.new("0.9.0+build.1") }
+
+          context "that is equal" do
+            let(:version_string) { "1.0.0+build.1" }
+            it { is_expected.to eq(1) }
+          end
+
+          context "when our side is greater" do
+            let(:version_string) { "1.0.0+build.2" }
+            it { is_expected.to eq(1) }
+          end
+
+          context "when our side is lower" do
+            let(:version_string) { "1.0.0+build" }
+            it { is_expected.to eq(1) }
+          end
+
+          context "when our side is longer" do
+            let(:version_string) { "1.0.0+build.1.1" }
+            it { is_expected.to eq(1) }
+          end
+        end
+
       end
 
       context "that is equal" do
@@ -111,37 +162,37 @@ RSpec.describe Dependabot::Nuget::Version do
           it { is_expected.to eq(0) }
         end
 
-        context "but our version has build information" do
-          let(:version_string) { "1.0.0+gc.1" }
-          it { is_expected.to eq(1) }
+        context "but our version has build metdata" do
+          let(:version_string) { "1.0.0+build.1" }
+          it { is_expected.to eq(0) }
         end
 
-        context "but the other version has build information" do
-          let(:other_version) { described_class.new("1.0.0+gc.1") }
-          it { is_expected.to eq(-1) }
+        context "but the other version has build metadata" do
+          let(:other_version) { described_class.new("1.0.0+build.1") }
+          it { is_expected.to eq(0) }
         end
 
-        context "and both sides have build information" do
-          let(:other_version) { described_class.new("1.0.0+gc.1") }
+        context "and both sides have build metadata" do
+          let(:other_version) { described_class.new("1.0.0+build.1") }
 
           context "that is equal" do
-            let(:version_string) { "1.0.0+gc.1" }
+            let(:version_string) { "1.0.0+build.1" }
             it { is_expected.to eq(0) }
           end
 
           context "when our side is greater" do
-            let(:version_string) { "1.0.0+gc.2" }
-            it { is_expected.to eq(1) }
+            let(:version_string) { "1.0.0+build.2" }
+            it { is_expected.to eq(0) }
           end
 
           context "when our side is lower" do
-            let(:version_string) { "1.0.0+gc" }
-            it { is_expected.to eq(-1) }
+            let(:version_string) { "1.0.0+build" }
+            it { is_expected.to eq(0) }
           end
 
           context "when our side is longer" do
-            let(:version_string) { "1.0.0+gc.1.1" }
-            it { is_expected.to eq(1) }
+            let(:version_string) { "1.0.0+build.1.1" }
+            it { is_expected.to eq(0) }
           end
         end
       end
@@ -174,6 +225,40 @@ RSpec.describe Dependabot::Nuget::Version do
           let(:other_version) { "3.0.0-preview7.19362.4" }
 
           it { is_expected.to eq(-1) }
+        end
+        
+        context "but our version has build metdata" do
+          let(:version_string) { "1.0.0+build.1" }
+          it { is_expected.to eq(-1) }
+        end
+
+        context "but the other version has build metadata" do
+          let(:other_version) { described_class.new("1.1.0+build.1") }
+          it { is_expected.to eq(-1) }
+        end
+
+        context "and both sides have build metadata" do
+          let(:other_version) { described_class.new("1.1.0+build.1") }
+
+          context "that is equal" do
+            let(:version_string) { "1.0.0+build.1" }
+            it { is_expected.to eq(-1) }
+          end
+
+          context "when our side is greater" do
+            let(:version_string) { "1.0.0+build.2" }
+            it { is_expected.to eq(-1) }
+          end
+
+          context "when our side is lower" do
+            let(:version_string) { "1.0.0+build" }
+            it { is_expected.to eq(-1) }
+          end
+
+          context "when our side is longer" do
+            let(:version_string) { "1.0.0+build.1.1" }
+            it { is_expected.to eq(-1) }
+          end
         end
       end
 
@@ -239,6 +324,7 @@ RSpec.describe Dependabot::Nuget::Version do
           it { is_expected.to eq(-1) }
         end
       end
+      
     end
   end
 
@@ -256,8 +342,8 @@ RSpec.describe Dependabot::Nuget::Version do
       it { is_expected.to eq(false) }
     end
 
-    context "with a valid build information" do
-      let(:version_string) { "1.1.0+gc.1" }
+    context "with a valid build metadata" do
+      let(:version_string) { "1.1.0+build.1" }
       it { is_expected.to eq(true) }
     end
   end
